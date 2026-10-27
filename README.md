@@ -1,52 +1,63 @@
-# Simple Honeypot Simulation (Threat Intelligence) 🎣
+# HoneyPot – Low-Interaction Honeypot in Python
 
-A **low-interaction honeypot** built in Python to simulate an accessible network service. Its purpose is to act as a decoy, divert automated attack traffic, and passively collect **Threat Intelligence (TI)** on attacker TTPs (Tactics, Techniques, and Procedures).
+A lightweight honeypot that pretends to be a login service, lures automated attackers and bots, and records everything they try. A built-in analyser then ranks the most common inputs, turning raw attack traffic into simple threat intelligence.
 
-## 💡 Project Goal
+## How it works
 
-To demonstrate foundational knowledge in **network programming**, **security deception**, and the process of generating actionable security data from malicious network activity.
+1. A TCP server listens on `0.0.0.0:8080` (configurable) and accepts any connection.
+2. Each attacker gets a fake banner (`Welcome to the secure server. Login:`) and a `Command:` prompt.
+3. Every connection and every line typed is timestamped with the source IP and port and written to `honeypot_log.txt`.
+4. Each connection runs in its own thread, so several attackers can be logged at the same time.
+5. Nothing is ever executed. Every command gets a harmless "not recognized" reply, so the host stays safe.
 
-## ✨ Features
+## Features
 
-* **Network Deception:** Simulates a network service (e.g., Telnet on port 23 or a custom service on port 8080) using Python's `socket` library.
-* **High-Fidelity Logging:** Captures the source **IP address**, **timestamp**, and **every piece of data** sent by the connecting client (simulated brute-force usernames/passwords, attempted commands).
-* **Log Analysis Utility:** Includes a custom script to parse the raw log file and rank attack attempts by frequency.
-* **Safe Execution:** Designed for low interaction to prevent lateral movement or compromise of the host system.
+- Fake service banner and interactive prompt to keep bots engaged
+- Multi-threaded connection handling (`socket` + `threading`)
+- Timestamped logging of source IP, port and every input received
+- Log analyser that counts connections and lists the top 10 most-tried commands or credentials (regex parsing)
+- Clean shutdown with `Ctrl+C`
 
-## ⚙️ Technical Skills Demonstrated
+## Tech stack
 
-* **Network Programming:** Mastery of TCP socket creation, binding, listening, and threading (`socket` and `threading` modules).
-* **Security Principles:** Understanding of **Deception**, **Isolation**, and the difference between low-interaction vs. high-interaction honeypots.
-* **Threat Intelligence:** Ability to generate, structure, and analyze raw attack data to prioritize defensive measures.
-* **File I/O and Regex:** Used Python's `os` and `re` modules for robust, accurate log file parsing.
+Python 3 standard library only: `socket`, `threading`, `datetime`, `re`, `os`. No external packages.
 
-## 🚀 Installation and Usage
+## Running it
 
-### Prerequisites
+```bash
+git clone https://github.com/Rahulsti/HoneyPot.git
+cd HoneyPot
+python3 honeypot.py
+```
 
-* Python 3.x installed.
-* Run in an **isolated environment** (Virtual Machine) for real-world testing.
+Output:
 
-### Running the Honeypot (Listening Mode)
+```
+[*] Simple Honeypot listening on 0.0.0.0:8080
+[*] Activity will be logged to /path/to/honeypot_log.txt
+```
 
-1.  **Clone the Repository:**
-    ```bash
-    git clone [https://github.com/Rahulsti/HoneyPot.git](https://github.com/Rahulsti/HoneyPot.git)
-    cd HoneyPot
-    ```
-2.  **Run the script:** The script is configured to listen on a high port (e.g., 8080) by default to avoid permission issues.
-    ```bash
-    python honeypot.py
-    # Output: [*] Simple Honeypot listening on 0.0.0.0:8080
-    ```
-3.  **Monitor:** All successful connections and captured inputs are saved to `honeypot_log.txt`.
+Test it from another terminal:
 
-### Running the Analysis (Reporting Mode)
+```bash
+nc localhost 8080
+```
 
-1.  **Stop the listening script** (if running) by pressing **Ctrl+C**.
-2.  **Edit `honeypot.py`:** At the bottom, comment out `start_honeypot()` and uncomment `analyze_logs(LOG_FILE)`.
-3.  **Run the script again:**
-    ```bash
-    python honeypot.py
-    # Output: Displays ranked list of most common captured commands/inputs.
-    ```
+### Analysing the logs
+
+Stop the honeypot with `Ctrl+C`. At the bottom of `honeypot.py`, comment out `start_honeypot()` and uncomment `analyze_logs(LOG_FILE)`, then run the script again. It prints the total number of connections and the top 10 inputs.
+
+## Configuration
+
+Edit the values at the top of `honeypot.py`:
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `LHOST` | `0.0.0.0` | Interface to listen on |
+| `LPORT` | `8080` | Port to listen on (ports below 1024, e.g. 23 for Telnet, need sudo) |
+| `FAKE_BANNER` | `Welcome to the secure server.` | Text shown to the attacker |
+| `LOG_FILE` | `honeypot_log.txt` | Where activity is recorded |
+
+## Safety note
+
+Run it only in an isolated environment, such as a VM or a lab network. It is a learning project, not a production honeypot.
